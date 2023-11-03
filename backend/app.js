@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
+const nodecron = require('node-cron');
 const app = express();
 const PORT = 3000;
 
@@ -11,6 +12,57 @@ app.use(express.urlencoded({ extended: true })) // for parsing application/x-www
 const apiSource = 'https://api.sorare.com/federation/graphql';
 
 let jwtToken = "";
+let rawData = [];
+let processedData = [];
+
+function processData(data) {
+    console.log(data);
+    processedData = data.map(item => {
+        return [item.date, item.minute, item.homeTeam.shortName, item.awayTeam.shortName, item.homeGoals, item.awayGoals, item.homeGoals + item.awayGoals, item.homeGoals.toString() + '-' + item.awayGoals.toString()];
+    })
+}
+async function getData(req, res) {
+    await axios.post(apiSource, {
+        query: `{
+            football{
+              myOngoingAndRecentGames{
+                id
+                date
+                status
+                homeTeam {
+                  __typename
+                    ...on Club {
+                    shortName
+                  }
+                }
+                awayTeam {
+                  __typename
+                  ...on Club {
+                    shortName
+                  }
+                }
+                homeGoals
+                awayGoals
+                minute
+              }
+            }
+          }`,
+    }, {
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken.token}`,
+            'JWT-AUD': 'hoang'
+        }
+    }).then (response => {
+        // console.log( response.data, "response all");
+        rawData = response.data.data.football.myOngoingAndRecentGames;
+        processData(rawData);
+        console.log(processedData);
+        res.status(200).json({data: response.data});
+    }).catch(error => {
+        console.error("Error Fetching Data", error.response.data, token);
+    })
+}
 
 app.get('/verifyToken', (req, res) => {
     
@@ -75,45 +127,7 @@ app.post('/login', (req, res) => {
 
 
 app.post('/data', (req, res) => {
-    // const jwtToken = req.body.jwtToken;
-    console.log(jwtToken, "saved token");
-    axios.post(apiSource, {
-        query: `{
-            football{
-              myOngoingAndRecentGames{
-                id
-                date
-                status
-                homeTeam {
-                  __typename
-                    ...on Club {
-                    shortName
-                  }
-                }
-                awayTeam {
-                  __typename
-                  ...on Club {
-                    shortName
-                  }
-                }
-                homeGoals
-                awayGoals
-                minute
-              }
-            }
-          }`,
-    }, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken.token}`,
-            'JWT-AUD': 'hoang'
-        }
-    }).then (response => {
-        console.log( response.data, "response all");
-        res.status(200).json({data: response.data});
-    }).catch(error => {
-        console.error("Error Fetching Data", error.response.data, token);
-    })
+    getData(req, res);
 })
 
 app.listen(PORT, (error) => {
