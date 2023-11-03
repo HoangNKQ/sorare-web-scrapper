@@ -3,6 +3,8 @@ const cors = require('cors');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
 const nodecron = require('node-cron');
+const { google } = require('googleapis');
+
 const app = express();
 const PORT = 3000;
 
@@ -18,9 +20,45 @@ let processedData = [];
 function processData(data) {
     console.log(data);
     processedData = data.map(item => {
-        return [item.date, item.minute, item.homeTeam.shortName, item.awayTeam.shortName, item.homeGoals, item.awayGoals, item.homeGoals + item.awayGoals, item.homeGoals.toString() + '-' + item.awayGoals.toString()];
+        return [item.date.slice(0, 10), item.minute, item.homeTeam.shortName, item.awayTeam.shortName, item.homeGoals, item.awayGoals, item.homeGoals + item.awayGoals, item.homeGoals.toString() + '-' + item.awayGoals.toString()];
     })
 }
+
+async function populateSheet(req, res) {
+    const auth = new google.auth.GoogleAuth({
+        keyFile: "credentials.json",
+        scopes: "https://www.googleapis.com/auth/spreadsheets"
+    })
+
+    const client = await auth.getClient();
+
+    const googleSheets = google.sheets({version: "v4", auth: client})
+
+    const spreadsheetId = "1grm2YsOxQ8ymgvYrw3-A9ouHMMsOf_Wlohn623cb_58";
+
+    const metaData = await googleSheets.spreadsheets.get({
+        auth,
+        spreadsheetId,
+    })
+
+    const getRows = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId,
+        range: "data",
+    })
+
+    await googleSheets.spreadsheets.values.append({
+        auth,
+        spreadsheetId,
+        valueInputOption: 'USER_ENTERED',
+        range: "data",
+        resource: {
+            values: processedData,
+        }
+    })
+    res.json(getRows);
+}
+
 async function getData(req, res) {
     await axios.post(apiSource, {
         query: `{
@@ -58,11 +96,15 @@ async function getData(req, res) {
         rawData = response.data.data.football.myOngoingAndRecentGames;
         processData(rawData);
         console.log(processedData);
-        res.status(200).json({data: response.data});
+        // res.status(200).json({data: response.data});
     }).catch(error => {
         console.error("Error Fetching Data", error.response.data, token);
     })
 }
+
+app.get('/test', (req, res) => {
+    populateSheet(req,res);
+})
 
 app.get('/verifyToken', (req, res) => {
     
