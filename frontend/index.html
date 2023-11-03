@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Webscrapper</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="main-title">
+        <h1>Sorare Websrapper</h1>
+      </div>
+      <div id="login-container">
+        <form id="login-form">
+          <h3>Login to your sorare account</h3>
+          <div class="input-box">
+            <input
+              type="email"
+              name="email"
+              id="email"
+              placeholder="email"
+              required
+            />
+          </div>
+          <div class="input-box">
+            <input
+              type="password"
+              name="password"
+              id="password"
+              placeholder="Password"
+              required
+            />
+          </div>
+          <p id="error-message"></p>
+          <div>
+            <button>Sign In</button>
+          </div>
+        </form>
+      </div>
+      <div id="success-container" style="display: none">
+        <button id="button-fetch">Get Sorare Data</button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
