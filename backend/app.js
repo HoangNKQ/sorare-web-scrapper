@@ -11,17 +11,39 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
+
 const apiSource = 'https://api.sorare.com/federation/graphql';
 
 let jwtToken = "";
-let headerRows = ["Date", "Game Time", "Home team", "Away team",	"Home Score", "Away Score",	"Total Goals", "Result"]
+let headerRows = ["GW", "Date","Time", "S05 League", "League", "Home", "Away",	"HG", "AG",	"TG", "Result"]
 let rawData = [];
 let processedData = [];
 
-function processData(data) {
-    console.log(data);
+function processData(data, headerRows) {
     processedData = data.map(item => {
-        return [item.date.slice(0, 10), item.minute, item.homeTeam.shortName, item.awayTeam.shortName, item.homeGoals, item.awayGoals, item.homeGoals + item.awayGoals, item.homeGoals.toString() + '-' + item.awayGoals.toString()];
+        let gameWeek = item.so5Fixture.gameWeek.toString();
+        let sourceDate = new Date(item.date);
+        let currentDate = new Date();
+        let date = sourceDate.toLocaleDateString();
+        let time = item.minute.toString();
+        let so5league = item.so5Fixture.mySo5Lineups[0].so5Leaderboard.displayName;
+        let league = item.competition.displayName;
+        let home = item.homeTeam.shortName;
+        let away = item.awayTeam.shortName;
+        let homeGoals = item.homeGoals.toString();
+        let awayGoals = item.awayGoals.toString();
+        let totalGoals = (item.homeGoals + item.awayGoals).toString();
+        let result = '';
+        if (sourceDate > currentDate) {
+            result = 'TBD';
+        } else if(item.homeGoals === item.awayGoals) {
+            result = 'D';
+        } else if (item.homeGoals > item.awayGoals) {
+            result = 'HW';
+        } else { 
+            result = 'AW';
+        }
+        return [gameWeek, date, time, so5league, league, home, away, homeGoals, awayGoals, totalGoals, result];
     })
     processedData.unshift(headerRows);
 }
@@ -38,17 +60,6 @@ async function populateSheet(req, res) {
 
     const spreadsheetId = "1grm2YsOxQ8ymgvYrw3-A9ouHMMsOf_Wlohn623cb_58";
 
-    // const metaData = await googleSheets.spreadsheets.get({
-    //     auth,
-    //     spreadsheetId,
-    // })
-
-    // const getRows = await googleSheets.spreadsheets.values.get({
-    //     auth,
-    //     spreadsheetId,
-    //     range: "data",
-    // })
-
     await googleSheets.spreadsheets.values.clear({
         auth,
         spreadsheetId,
@@ -62,29 +73,38 @@ async function populateSheet(req, res) {
         range: "data",
         resource: {
             values: processedData,
-            // values: [['3', 'rw43', '23425', 't5w4t','2ef24', '0', '3' ,'5' ]]
         }
     })
-    // res.json(getRows);
 }
 
 async function getData(req, res) {
     await axios.post(apiSource, {
         query: `{
-            football{
-              myOngoingAndRecentGames{
+            football {
+              myOngoingAndRecentGames {
                 id
                 date
                 status
+                so5Fixture {
+                  mySo5Lineups{
+                    so5Leaderboard {
+                      displayName
+                    }
+                  }
+                  gameWeek
+                }
+                competition {
+                  displayName 
+                }
                 homeTeam {
                   __typename
-                    ...on Club {
+                  ... on Club {
                     shortName
                   }
                 }
                 awayTeam {
                   __typename
-                  ...on Club {
+                  ... on Club {
                     shortName
                   }
                 }
@@ -98,25 +118,20 @@ async function getData(req, res) {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${jwtToken.token}`,
-            'JWT-AUD': 'hoang'
+            'JWT-AUD': 'SorareData'
         }
     }).then (response => {
         rawData = response.data.data.football.myOngoingAndRecentGames;
-        processData(rawData);
+        processData(rawData, headerRows);
         console.log(processedData);
         populateSheet(req, res);
-        res.status(200).json({data: response.data});
+        res.status(200).json({data: processedData});
     }).catch(error => {
         console.error("Error Fetching Data", error.response.data, token);
     })
 }
 
-app.get('/test', (req, res) => {
-    populateSheet(req,res);
-})
-
 app.get('/verifyToken', (req, res) => {
-    
     let currentDate = new Date();
     let tokenExpiredDate = new Date(jwtToken.expiredAt);
     console.log(jwtToken.expiredAt, currentDate);
@@ -126,7 +141,6 @@ app.get('/verifyToken', (req, res) => {
     else {
         res.status(200).json({tokenValid: false})
     }
-    
 })
 
 app.post('/login', (req, res) => {
@@ -147,7 +161,7 @@ app.post('/login', (req, res) => {
                     signIn(input: $input) {
                     currentUser {
                         slug
-                        jwtToken(aud: "hoang") {
+                        jwtToken(aud: "SorareData") {
                         token
                         expiredAt
                         }
@@ -163,11 +177,9 @@ app.post('/login', (req, res) => {
             .then(response => {
                 const token = response.data.data.signIn.currentUser.jwtToken;
                 jwtToken = token;
-                console.log(token, "first token");
                 res.status(200).json({message: "Login Successful", accessToken: token});
             })
             .catch(error => {
-                console.error('Authentication failed:', error);
                 res.status(401).json({message: "Login Failed"});
             });
     }).catch(error => {
@@ -175,7 +187,6 @@ app.post('/login', (req, res) => {
         res.status(500).json("Server Error");
     });
 })
-
 
 app.post('/data', (req, res) => {
     getData(req, res);
