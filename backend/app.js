@@ -48,7 +48,7 @@ function processData(data, headerRows) {
     processedData.unshift(headerRows);
 }
 
-async function populateSheet(req, res) {
+async function populateSheet() {
     const auth = new google.auth.GoogleAuth({
         keyFile: "credentials.json",
         scopes: "https://www.googleapis.com/auth/spreadsheets"
@@ -124,8 +124,8 @@ async function getData(req, res) {
         rawData = response.data.data.football.myOngoingAndRecentGames;
         processData(rawData, headerRows);
         console.log(processedData);
-        populateSheet(req, res);
-        res.status(200).json({data: processedData});
+        populateSheet();
+        // res.status(200).json({data: processedData});
     }).catch(error => {
         console.error("Error Fetching Data", error.response.data, token);
     })
@@ -189,8 +189,14 @@ app.post('/login', (req, res) => {
 })
 
 app.post('/data', (req, res) => {
-    getData(req, res);
+    getData();
 })
+
+nodecron.schedule("00 00 00 * * *", function () {
+    console.log("-------------");
+    console.log("running task every day");
+    getData();
+});
 
 app.listen(PORT, (error) => {
     if (!error)
