@@ -49,20 +49,26 @@ loginForm.addEventListener('submit', (e) => {
         .then(response => response.json())
         .then(data => {
             if (data.message === "Login Failed") {
-                errorMessage.textContent = "Failed to login";
+                errorMessage.style.display = "block";
+                errorMessage.textContent = "Wrong Credentials";
                 errorMessage.style.color = "red";
             }
             else {
+                errorMessage.style.display = "none";
                 loginContainer.style.display = 'none';
-                loginSuccess.style.display = 'block';
+                loginSuccess.style.display = 'flex';
                 localStorage.setItem('jwtToken', data.accessToken.token);
             }
         })
         .catch(error => {
-            errorMessage.textContent = error;
+            errorMessage.style.display = "block";
+            errorMessage.textContent = "Server Error";
+            errorMessage.style.color = "red";
         })
-    // email.value = "";
-    // password.value = "";
+        .finally(() => {
+            email.value = "";
+            password.value = "";
+        })
 })
 
 

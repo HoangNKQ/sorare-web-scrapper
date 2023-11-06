@@ -3,16 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
     <title>Webscrapper</title>
   </head>
   <body>
     <div class="container">
       <div class="main-title">
-        <h1>Sorare Websrapper</h1>
+        <h1>Sorare Webscrapper</h1>
       </div>
       <div id="login-container">
         <form id="login-form">
-          <h3>Login to your sorare account</h3>
+          <h2>Login to your Sorare account</h2>
           <div class="input-box">
             <input
               type="email"
@@ -31,15 +32,21 @@
               required
             />
           </div>
-          <p id="error-message"></p>
-          <div>
+          <p id="error-message" style="display: none;"></p>
+          <div id="sign-in-btn">
             <button>Sign In</button>
           </div>
         </form>
       </div>
-      <div id="success-container" style="display: none">
+      <div id="success-container" >
         <button id="button-fetch">Get Sorare Data</button>
-        </div>
+        <a
+          href="https://docs.google.com/spreadsheets/d/1grm2YsOxQ8ymgvYrw3-A9ouHMMsOf_Wlohn623cb_58/edit?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Open Google Sheet</a
+        >
+      </div>
     </div>
     <script src="app.js"></script>
   </body>
