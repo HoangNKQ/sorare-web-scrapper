@@ -11,23 +11,23 @@ let fetchButton = document.getElementById('button-fetch');
 
 const handlePageLoad = () => {
     if (isTokenValid) {
-      // Token is valid, show success container
-      loginSuccess.style.display = 'block';
-      loginContainer.style.display = 'none';
+        // Token is valid, show success container
+        loginSuccess.style.display = 'block';
+        loginContainer.style.display = 'none';
     } else {
-      // Token is invalid or not found, show login container
-      loginContainer.style.display = 'block';
+        // Token is invalid or not found, show login container
+        loginContainer.style.display = 'block';
     }
-  };
+};
 
 fetch(server + '/verifyToken')
-.then(
-    response => response.json()
-)
-.then(data => {
-    isTokenValid = data.tokenValid;
-    handlePageLoad();
-});
+    .then(
+        response => response.json()
+    )
+    .then(data => {
+        isTokenValid = data.tokenValid;
+        handlePageLoad();
+    });
 
 loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -84,12 +84,12 @@ fetchButton.addEventListener('click', (e) => {
             jwtToken,
         }),
     })
-    .then(response => response.json())
-    .then(data => {
-        console.log(data.data);
-    })
-    .catch(error => {
-        console.error("error", error);
-    })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data.data);
+        })
+        .catch(error => {
+            console.error("error", error);
+        })
 
 })
