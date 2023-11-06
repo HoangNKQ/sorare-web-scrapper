@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true })) // for parsing application/x-www
 const apiSource = 'https://api.sorare.com/federation/graphql';
 
 let jwtToken = "";
-let headerRows = ["GW", "Date","Time", "S05 League", "League", "Home", "Away",	"HG", "AG",	"TG", "Result"]
+let headerRows = ["GW", "Date", "Time", "S05 League", "League", "Home", "Away", "HG", "AG", "TG", "Result"]
 let rawData = [];
 let processedData = [];
 
@@ -36,11 +36,11 @@ function processData(data, headerRows) {
         let result = '';
         if (sourceDate > currentDate) {
             result = 'TBD';
-        } else if(item.homeGoals === item.awayGoals) {
+        } else if (item.homeGoals === item.awayGoals) {
             result = 'D';
         } else if (item.homeGoals > item.awayGoals) {
             result = 'HW';
-        } else { 
+        } else {
             result = 'AW';
         }
         return [gameWeek, date, time, so5league, league, home, away, homeGoals, awayGoals, totalGoals, result];
@@ -56,7 +56,7 @@ async function populateSheet() {
 
     const client = await auth.getClient();
 
-    const googleSheets = google.sheets({version: "v4", auth: client})
+    const googleSheets = google.sheets({ version: "v4", auth: client })
 
     const spreadsheetId = "1grm2YsOxQ8ymgvYrw3-A9ouHMMsOf_Wlohn623cb_58";
 
@@ -120,7 +120,7 @@ async function getData(req, res) {
             'Authorization': `Bearer ${jwtToken.token}`,
             'JWT-AUD': 'SorareData'
         }
-    }).then (response => {
+    }).then(response => {
         rawData = response.data.data.football.myOngoingAndRecentGames;
         processData(rawData, headerRows);
         console.log(processedData);
@@ -136,10 +136,10 @@ app.get('/verifyToken', (req, res) => {
     let tokenExpiredDate = new Date(jwtToken.expiredAt);
     console.log(jwtToken.expiredAt, currentDate);
     if (currentDate < tokenExpiredDate) {
-        res.status(200).json({tokenValid: true})
+        res.status(200).json({ tokenValid: true })
     }
     else {
-        res.status(200).json({tokenValid: false})
+        res.status(200).json({ tokenValid: false })
     }
 })
 
@@ -173,14 +173,14 @@ app.post('/login', (req, res) => {
                     }
                     }
                 }`
-            })
+        })
             .then(response => {
                 const token = response.data.data.signIn.currentUser.jwtToken;
                 jwtToken = token;
-                res.status(200).json({message: "Login Successful", accessToken: token});
+                res.status(200).json({ message: "Login Successful", accessToken: token });
             })
             .catch(error => {
-                res.status(401).json({message: "Login Failed"});
+                res.status(401).json({ message: "Login Failed" });
             });
     }).catch(error => {
         console.error('Failed to fetch salt', error);
