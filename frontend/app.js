@@ -8,6 +8,7 @@ let loginContainer = document.getElementById('login-container');
 let loginSuccess = document.getElementById('success-container');
 let errorMessage = document.getElementById('error-message');
 let fetchButton = document.getElementById('button-fetch');
+let input2fa = document.getElementById('2fa-input');
 
 const handlePageLoad = () => {
     if (isTokenValid) {
@@ -34,7 +35,7 @@ loginForm.addEventListener('submit', (e) => {
 
     let email = document.getElementById('email').value;
     let password = document.getElementById("password").value;
-
+    let code2fa = document.getElementById("2fa").value;
     fetch(server + '/login', {
         method: 'POST',
         mode: 'cors',
@@ -43,7 +44,8 @@ loginForm.addEventListener('submit', (e) => {
         },
         body: JSON.stringify({
             email,
-            password
+            password,
+            code2fa,
         }),
     })
         .then(response => response.json())
@@ -53,7 +55,15 @@ loginForm.addEventListener('submit', (e) => {
                 errorMessage.textContent = "Wrong Credentials";
                 errorMessage.style.color = "red";
             }
-            else {
+            else if (data.message === "Need 2FA"){
+                input2fa.style.display = "block";
+            }
+            else if (data.message === "Invalid 2FA code") {
+                errorMessage.style.display = "block";
+                errorMessage.textContent = "Invalid 2FA code";
+                errorMessage.style.color = "red";
+            }
+            else if (data.message === 'Login Successful'){
                 errorMessage.style.display = "none";
                 loginContainer.style.display = 'none';
                 loginSuccess.style.display = 'flex';
@@ -64,10 +74,6 @@ loginForm.addEventListener('submit', (e) => {
             errorMessage.style.display = "block";
             errorMessage.textContent = "Server Error";
             errorMessage.style.color = "red";
-        })
-        .finally(() => {
-            email.value = "";
-            password.value = "";
         })
 })
 

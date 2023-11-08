@@ -25,7 +25,7 @@ function processData(data, headerRows) {
         let sourceDate = new Date(item.date);
         let currentDate = new Date();
         let date = sourceDate.toLocaleDateString();
-        let time = item.minute.toString();
+        let time = sourceDate.toLocaleTimeString();
         let so5league = item.so5Fixture.mySo5Lineups[0].so5Leaderboard.displayName;
         let league = item.competition.displayName;
         let home = item.homeTeam.shortName;
@@ -134,7 +134,6 @@ async function getData(req, res) {
 app.get('/verifyToken', (req, res) => {
     let currentDate = new Date();
     let tokenExpiredDate = new Date(jwtToken.expiredAt);
-    console.log(jwtToken.expiredAt, currentDate);
     if (currentDate < tokenExpiredDate) {
         res.status(200).json({ tokenValid: true })
     }
@@ -146,6 +145,7 @@ app.get('/verifyToken', (req, res) => {
 app.post('/login', (req, res) => {
     let email = req.body.email;
     let password = req.body.password;
+    let code2fa = req.body.code2fa;
     axios.get(`https://api.sorare.com/api/v1/users/${email}`).then(response => {
         const salt = response.data.salt;
         const hashedPassword = bcrypt.hashSync(password, salt);
@@ -153,7 +153,6 @@ app.post('/login', (req, res) => {
             email: email,
             password: hashedPassword
         };
-
         axios.post(apiSource, {
             operationName: 'SignInMutation',
             variables: { input: authData },
@@ -167,20 +166,75 @@ app.post('/login', (req, res) => {
                         }
                     }
                     otpSessionChallenge
-                    tcuToken
-                    errors {
-                        message
-                    }
+                        errors {
+                            message
+                        }
                     }
                 }`
         })
             .then(response => {
-                const token = response.data.data.signIn.currentUser.jwtToken;
-                jwtToken = token;
-                res.status(200).json({ message: "Login Successful", accessToken: token });
+                const currentUser = response.data.data.signIn.currentUser;
+                const errorSignin = response.data.data.signIn.errors[0].message;
+                let otpSession =  response.data.data.signIn.otpSessionChallenge;
+                // console.log(currentUser, errorSignin, otpSession);
+                if (currentUser === null && otpSession !== null) {
+                    if (code2fa === '') {
+                        console.log("Need 2FA");
+                        res.status(200).json({message: "Need 2FA"})
+                    }
+                    else {
+                        const input2FA = {
+                            otpSessionChallenge: otpSession,
+                            otpAttempt: code2fa,
+                        }
+                        axios.post(apiSource, {
+                            operationName: 'SignInMutation',
+                            variables: { input: input2FA },
+                            query: `mutation SignInMutation($input: signInInput!) {
+                                        signIn(input: $input) {
+                                        currentUser {
+                                            slug
+                                            jwtToken(aud: "SorareData") {
+                                            token
+                                            expiredAt
+                                            }
+                                        }
+                                        otpSessionChallenge
+                                        tcuToken
+                                        errors {
+                                            message
+                                        }
+                                        }
+                                    }`
+                        }).then(response => {
+                            console.log(response.data.data.signIn);
+                            if (response.data.data.signIn.currentUser === null) {
+                                res.status(401).json({message: "Invalid 2FA code"});
+                            }
+                            else {
+                                const token = response.data.data.signIn.currentUser.jwtToken;
+                                jwtToken = token;
+                                console.log(response.data.data.signIn);
+                                res.status(200).json({ message: "Login Successful", accessToken: token });
+                            }
+                        }).catch(error => {
+                            console.log(error);
+                        })
+                    }
+                }
+                else if (currentUser === null && otpSession === null) {
+                    console.log("Login Failed");
+                    res.status(200).json({ message: "Login Failed" });
+                }
+                else {
+                    const token = response.data.data.signIn.currentUser.jwtToken;
+                    jwtToken = token;
+                    console.log(response.data.data.signIn);
+                    res.status(200).json({ message: "Login Successful", accessToken: token });
+                }
             })
             .catch(error => {
-                res.status(401).json({ message: "Login Failed" });
+                res.status(401).json({ message: "Login Problem" });
             });
     }).catch(error => {
         console.error('Failed to fetch salt', error);
