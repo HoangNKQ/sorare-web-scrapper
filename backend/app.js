@@ -26,7 +26,7 @@ function processData(data, headerRows) {
         let currentDate = new Date();
         let date = sourceDate.toLocaleDateString();
         let time = sourceDate.toLocaleTimeString();
-        let so5league = item.so5Fixture.mySo5Lineups[0].so5Leaderboard.displayName;
+        let so5league = item.mySo5Lineups[0].so5Leaderboard.so5League.displayName;
         let league = item.competition.displayName;
         let home = item.homeTeam.shortName;
         let away = item.awayTeam.shortName;
@@ -86,12 +86,15 @@ async function getData(req, res) {
                 date
                 status
                 so5Fixture {
-                  mySo5Lineups{
-                    so5Leaderboard {
+                  gameWeek
+                }
+                mySo5Lineups {
+                  so5Leaderboard {
+                    displayName
+                    so5League {
                       displayName
                     }
                   }
-                  gameWeek
                 }
                 competition {
                   displayName 
@@ -113,7 +116,8 @@ async function getData(req, res) {
                 minute
               }
             }
-          }`,
+          }
+          `,
     }, {
         headers: {
             'Content-Type': 'application/json',
@@ -125,9 +129,9 @@ async function getData(req, res) {
         processData(rawData, headerRows);
         console.log(processedData);
         populateSheet();
-        // res.status(200).json({data: processedData});
+        res.status(200).json({data: rawData});
     }).catch(error => {
-        console.error("Error Fetching Data", error.response.data, token);
+        console.error("Error Fetching Data", error);
     })
 }
 
@@ -243,7 +247,7 @@ app.post('/login', (req, res) => {
 })
 
 app.post('/data', (req, res) => {
-    getData();
+    getData(req,res);
 })
 
 nodecron.schedule("00 00 00 * * *", function () {
